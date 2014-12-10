@@ -1,0 +1,94 @@
+#include <stdio.h>             
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/ioctl.h>
+#include <linux/autoconf.h>
+#include "ralink_gpio.h"
+
+#define GPIO_DEV	"/dev/bgpio"
+
+#define GET_MODULES	  1
+#define GET_IDS		  2
+#define CTL_ID1		  3
+#define CTL_ID2		  4
+#define CTL_ID3		  5
+#define CTL_ID4		  6
+
+enum {
+	gpio_in,
+	gpio_out,
+};
+
+extern int testModuleOn()
+{
+	int fd, req;
+	int status = -1;
+	fd = open(GPIO_DEV, O_RDONLY);
+	if (fd < 0) {
+		perror(GPIO_DEV);
+		return -1;
+	}
+	
+	ioctl(fd, GET_MODULES, &status);
+	printf("modues status: 0x%x\n", status);
+	
+	close(fd);
+	return status;
+
+}
+
+extern int getModuleState()
+{
+	int fd, req;
+	int status = -1;
+	fd = open(GPIO_DEV, O_RDONLY);
+	if (fd < 0) {
+		perror(GPIO_DEV);
+		return -1;
+	}
+	
+	ioctl(fd, GET_IDS, &status);
+	printf("modules: 0x%x\n", status);
+	
+	close(fd);
+	return 0;
+}
+
+extern int resetModule(int id, int val)
+{
+	int fd, req;
+	int status = -1;
+	int cmd;
+	if(id < 0 || id >4){
+		perror("error: id should be 1-4\n");
+	}
+		
+	fd = open(GPIO_DEV, O_RDONLY);
+	if (fd < 0) {
+		perror(GPIO_DEV);
+		return -1;
+	}
+	status = val;
+	ioctl(fd, id+2, &status);
+	
+	close(fd);
+	return 0;
+	return 0;
+}
+
+extern int getBit(char val1, char val2){
+	int i=0;
+	int bit = -1;
+	for(i=0; i<4; i++){
+		if( (val1 ^ val2) >> i == 1){
+			bit = i;
+			return bit;
+		}
+	}
+	return bit;
+}
+
+
