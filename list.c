@@ -6,20 +6,22 @@ extern LISTNODE* list_create( )
 {
 	LISTNODE* p_head;
 	p_head = (LISTNODE*) malloc(sizeof(LISTNODE));
+	p_head->next = NULL;
 	return p_head;
 }
 
-extern int list_insert(LISTNODE* p_head, struct Event* p_event)
+extern int list_insert(LISTNODE* p_head, struct Event event)
 {
 	LISTNODE* p = p_head->next;
 	LISTNODE *q;
 	while(p != NULL)
 		p = p->next;
-	q = (LISTNODE*)malloc(sizeof(LISTNODE));
+	q = ( LISTNODE* )malloc( sizeof(LISTNODE) );
 	q->next = NULL;
-	q->event = p_event;
+	q->event = (struct Event*)malloc(sizeof(struct Event));
+	*(q->event) = event;
 
-	p->next = q;
+	p = q;
 	return 0;	
 }
 

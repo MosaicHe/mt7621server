@@ -13,6 +13,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 //#include "ralink_gpio.h"
 
@@ -23,7 +24,7 @@
 
 #define IP_FOUND "server_broadcast"
 #define IP_FOUND_ACK "server_broadcast_ack"
-#define IFNAME "br0"
+#define IFNAME "eth7"
 #define MCAST_PORT 9999
 
 
@@ -246,6 +247,8 @@ int sendBroadCast()
 	timeout.tv_sec = 2; //超时时间为2秒
 	timeout.tv_usec = 0;
 
+	deb_print(" broadcast \n");
+
 	//建立数据报套接字
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0)
@@ -265,7 +268,7 @@ int sendBroadCast()
 	ifr = ifc.ifc_req;
 	for (j = ifc.ifc_len / sizeof(struct ifreq); --j >= 0; ifr++)
 	{
-		if (!strcmp(ifr->ifr_name, "br0"))
+		if (!strcmp(ifr->ifr_name, IFNAME))
 		{
 			if (ioctl(sock, SIOCGIFFLAGS, (char *) ifr) < 0)
 			{
@@ -310,6 +313,7 @@ int sendBroadCast()
 			continue;
 		}
 
+#if 0
 		//文件描述符清0
 		FD_ZERO(&readfd);
 		//将套接字文件描述符加入到文件描述符集合中
@@ -341,6 +345,7 @@ int sendBroadCast()
 			}
 			break;
 		}
+#endif
 	}
 	return -1;
 }

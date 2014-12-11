@@ -38,7 +38,7 @@
 
 #define MAXMODULE 4
 
-#define DATASIZE    256
+#define DATASIZE    1024
 #define PORT 8000
 #define PORT2 8001
 #define SRV_IP "192.168.111.1"
@@ -65,7 +65,7 @@ typedef struct{
 
 typedef struct{
 	char SN[12];
-	char fwVersion;
+	char fwVersion[16];
 
 	char state_24g;
 	char ssid_24g[36];
@@ -77,7 +77,6 @@ typedef struct{
 	char mac_5g[18];
 	int channel_5g;
 }moduleInfo;
-
 
 typedef struct{
 	int  moduleID;
@@ -130,7 +129,7 @@ struct Event{
 #define STATE_CONFIG 3
 #define STATE_RUN 4
 
-#define EVENT_RECV 1
+#define CLIENT_RECV 1
 
 
 #endif  // __CLIENT_H
