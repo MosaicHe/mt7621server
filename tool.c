@@ -382,3 +382,14 @@ char* getModuleIp( int id, char* ipaddr )
 }
 
 
+int sendHeartbeat(client pclient)
+{
+	int ret = 0;
+//	ret = sendData(fd, HEARTBEAT, NULL, 0);
+	return ret;
+}
+
+
+
+
+

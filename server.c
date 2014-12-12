@@ -4,10 +4,13 @@
 #include <sys/un.h> 
 #include <pthread.h>
 #include <signal.h>
+#include <time.h>
 #include <sys/sendfile.h>
 //#include "nvram.h"
 #include "tool.h"
 #include "list.h"
+
+#define HB_TIMEOUT 5
 
 static LISTNODE *listHead;
 static client *p_client;
@@ -15,10 +18,11 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t empty_cond = PTHREAD_COND_INITIALIZER;
 
 #define MAX(a, b) (a>b?a:b)
+#define MIN(a, b) (a>b?b:a)
 
 void doConfigModule(client* pclient)
 {
-	sendData(pclient->moduleID, REQ_CONFIG, NULL, 0);
+	sendData(pclient->sock_fd, REQ_CONFIG, NULL, 0);
 }
 
 void handleEvent(struct Event* p_Event)
@@ -30,8 +34,10 @@ void handleEvent(struct Event* p_Event)
 	int responseState;
 	moduleInfo md;
 	deb_print("handEvent\n");
+
 	switch(p_Event->eventType){
 		case CLIENT_RECV:
+			deb_print("CLIENT_RECV\n");
 			switch(pclient->state){
 				case STATE_IDLE:
 					deb_print("STATE_IDLE\n");
@@ -40,22 +46,26 @@ void handleEvent(struct Event* p_Event)
 						pclient->state = STATE_HELLO;
 						memcpy(&md, pmsg->dataBuf, pmsg->dataSize);	
 						pclient->mdInfo=md;
-						sendData(pclient->moduleID, STATE_HELLO, NULL, 0);
+						sendData( pclient->sock_fd, REQ_HELLO, NULL, 0);
 						if(ret<0){
 							/*FIXME*/		
 						}
 					}else{
 						responseState = STATE_IDLE;
-						sendData(pclient->moduleID, ERROR, &responseState, sizeof(int));
+						sendData(pclient->sock_fd, ERROR, &responseState, sizeof(int));
 					}
 				break;
 				case STATE_HELLO:
 					deb_print("STATE_HELLO\n");
 					if(pmsg->dataType==REQ_FIRTWARE_UPDATE){
+#if 0
 						if( !strcmp( pclient->mdInfo.fwVersion, getModulefwVersion() ) ){
+#else
+						if(0){
+#endif
 							fwUpdate = 1;
-							sendData(pclient->moduleID, REQ_FIRTWARE_UPDATE, &fwUpdate, sizeof(int));
-				        	ret = sendFirmware(pclient->moduleID);
+							sendData(pclient->sock_fd, REQ_FIRTWARE_UPDATE, &fwUpdate, sizeof(int));
+				        	ret = sendFirmware(pclient->sock_fd);
 							if(ret<0){
 								/* FIXME */							
 							}
@@ -64,12 +74,12 @@ void handleEvent(struct Event* p_Event)
 							table_delete(client_table, pclient);								
 						}else{
 							fwUpdate = 0;
-							sendData(pclient->moduleID, REQ_FIRTWARE_UPDATE, &fwUpdate, sizeof(int) );
+							sendData(pclient->sock_fd, REQ_FIRTWARE_UPDATE, &fwUpdate, sizeof(int) );
 						  	pclient->state = STATE_FIRMWARE_CHECKED;
 						}				
 					}else{
 						responseState = STATE_HELLO;
-						sendData(pclient->moduleID, ERROR, &responseState, sizeof(int));
+						sendData(pclient->sock_fd, ERROR, &responseState, sizeof(int));
 					}
 				break;
 				case STATE_FIRMWARE_CHECKED:
@@ -78,20 +88,24 @@ void handleEvent(struct Event* p_Event)
 						pclient->state = STATE_CONFIG;
 					}else{
 						responseState = STATE_FIRMWARE_CHECKED;
-						sendData(pclient->moduleID, ERROR, &responseState, sizeof(int));
+						sendData(pclient->sock_fd, ERROR, &responseState, sizeof(int));
 					}
 				break;
 				case STATE_CONFIG:
 					if( pmsg->dataType==REQ_RUN ){
-						sendData(pclient->moduleID, REQ_RUN, NULL, sizeof(int));
+						sendData(pclient->sock_fd, REQ_RUN, NULL, sizeof(int));
 						pclient->state = STATE_RUN;
 					}else{
 						responseState = STATE_CONFIG;
-						sendData(pclient->moduleID, ERROR, &responseState, sizeof(int));
+						sendData(pclient->sock_fd, ERROR, &responseState, sizeof(int));
 					}
 				break;
 				case STATE_RUN:
 					/* FIXME */
+					pthread_mutex_lock(&mutex);
+					close(pclient->sock_fd);
+					pclient->sock_fd = -1;
+					pthread_mutex_unlock(&mutex);
 				break;
 
 				default:
@@ -104,7 +118,6 @@ void handleEvent(struct Event* p_Event)
 	}
 }
 
-
 void* workthread(void* arg)
 {
 	struct Event *p_ev;
@@ -114,12 +127,13 @@ void* workthread(void* arg)
 		deb_print("************\n");
 		if( list_size(listHead)>0){
 			pthread_mutex_lock(&mutex);
-			list_get(listHead, p_ev);
+			list_pop( listHead, &p_ev);
 			pthread_mutex_unlock(&mutex); 
 			handleEvent(p_ev);
 			free(p_ev);	
 		}else{
 			pthread_mutex_lock(&mutex);
+			deb_print(" pthread wait for signal\n");
 			pthread_cond_wait(&empty_cond, &mutex);
 			pthread_mutex_unlock(&mutex);
 		}
@@ -198,6 +212,8 @@ int main(int argc, char**argv)
 	pthread_t ptd;
 	msg *p_msg;
 	struct Event ev;
+	long now;
+	long timeRemain = HB_TIMEOUT;
 
 	fd_set rdfds;
 	int maxfd;
@@ -214,7 +230,7 @@ int main(int argc, char**argv)
 	//init mutex
 	pthread_mutex_init (&mutex, NULL);	
 	table_init(client_table);
-	listHead = list_create();
+	list_create(&listHead);
 
 	unix_fd = openUnixdomainSocket();
 
@@ -253,33 +269,46 @@ int main(int argc, char**argv)
 		FD_SET(server_fd, &rdfds);
 		FD_SET(unix_fd, &rdfds);
 		maxfd = MAX(server_fd, unix_fd);
+		timeRemain = HB_TIMEOUT;
 		for(i=1;i<4;i++){
 			table_get(client_table, p_client, i);
-			if(p_client != NULL){
+			if(p_client != NULL && p_client->sock_fd > 0){
 				FD_SET(p_client->sock_fd, &rdfds);
-				maxfd = MAX(maxfd, p_client->sock_fd);				
+				maxfd = MAX(maxfd, p_client->sock_fd);
+				timeRemain=MIN(timeRemain, now-p_client->activeTime);		
 			}
 		}
-
+		deb_print("timeRemain:%ld\n", timeRemain);	
+//		tv.tv_sec = 2;
+		tv.tv_sec = timeRemain;
 		deb_print("******select*******\n");
 		ret = select( maxfd+1, &rdfds, NULL, NULL, &tv);
 		switch(ret){
 		case -1:
-			perror("select error");
-			exit(1);
+			perror("select error\n");
+			break;
 		case 0:
-			/*FIXME*/		
+			/*FIXME*/
+			now = time(NULL);
+			for(i=1;i<4;i++){
+				table_get(client_table, p_client, i);
+				if(p_client != NULL && (p_client->activeTime - now > HB_TIMEOUT) ){
+					//send heartbeat data
+					sendHeartbeat( p_client);	
+				}
+			}
 			break;
 
 		default:
 			if( FD_ISSET(server_fd, &rdfds)){
 				cli_fd = accept( server_fd, (struct sockaddr*)&peer_addr, &addrlen);
-				deb_print("a client is connecting: ip:%s, port:%d\n",
-							inet_ntoa(peer_addr.sin_addr), ntohs(peer_addr.sin_port));
+				printf("a client is connecting: ip:%s, port:%d\n",
+						  inet_ntoa(peer_addr.sin_addr), ntohs(peer_addr.sin_port));
 				p_client = (client*)malloc(sizeof(client));
 				p_client->sock_fd = cli_fd;
 				p_client->state = STATE_IDLE;
-				p_client->addr = peer_addr;
+				p_client->addr = peer_addr; 
+				p_client->activeTime = time(NULL);
 				table_insert(client_table, p_client);
 				break;
 
@@ -307,16 +336,29 @@ int main(int argc, char**argv)
 							perror("Socket ead error\n");
 							break;
 						}
-						deb_print("receive data:%d\n",p_msg->dataSize);
-
+						deb_print("read data length:%d\n", ret);
+						if(ret==0){
+							close(p_client->sock_fd);
+							p_client->sock_fd = -1;
+							table_delete(client_table, p_client);
+							break;
+						}						
+						
+						deb_print("dataType:%d, receive data:%d\n",p_msg->dataType, p_msg->dataSize);
+						
+						now = time(NULL);						
+						p_client->activeTime = now;
 						ev.eventType = CLIENT_RECV;
 						ev.pdata = p_msg;
 						ev.pclient= p_client;
 			
 						pthread_mutex_lock(&mutex);
-						list_insert( listHead, ev );
-						if( list_size(listHead)==1 )
+						list_append( listHead, ev );
+						deb_print("list size:%d\n",list_size(listHead));
+						if( list_size(listHead)==1 ){
+							deb_print("send singal to pthread wait\n");
 							pthread_cond_signal(&empty_cond);
+						}
 						pthread_mutex_unlock(&mutex);
 					}
 				}

@@ -8,12 +8,13 @@ typedef struct _listnode{
 	struct _listnode* prev;
 	struct _listnode* next;
 	struct Event  *event;
-}LISTNODE;
+}LISTNODE, *P_LISTNODE;
 
 
-LISTNODE* list_create();
+LISTNODE* list_create(LISTNODE** p_head);
 int list_insert(LISTNODE* p_head, struct Event p_event);
-int list_get(LISTNODE* p_head, struct Event* p_event);
+int list_append(LISTNODE* p_head, struct Event p_evnet);
+int list_pop(LISTNODE* p_head, struct Event** p_event);
 int list_size(LISTNODE* p_head);
 int list_destroy();
 

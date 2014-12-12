@@ -38,7 +38,7 @@
 
 #define MAXMODULE 4
 
-#define DATASIZE    1024
+#define DATASIZE    512
 #define PORT 8000
 #define PORT2 8001
 #define SRV_IP "192.168.111.1"
@@ -102,23 +102,12 @@ struct Event{
 	client *pclient;
 };
 
-#define SERVERIP 101
-
-#define CMD_CLOSE 0
-#define CMD_HEARTBEAT 1
-
-#define RSP_RETURN   200
-#define RQ_IP  201
-#define RSP_IP 202
-#define RSP_HEARTBEAT  203
-
-#define REQUEST_SERVERIP 204
-
-
 #define REQ_HELLO   		1
 #define REQ_FIRTWARE_UPDATE 2
 #define REQ_CONFIG		    3
 #define REQ_RUN 			4
+
+#define HEARTBEAT			5
 
 #define ERROR			   -1			
 
