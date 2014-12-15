@@ -24,7 +24,7 @@
 
 #define IP_FOUND "server_broadcast"
 #define IP_FOUND_ACK "server_broadcast_ack"
-#define IFNAME "eth7"
+#define IFNAME "wlan0"
 #define MCAST_PORT 8001
 
 
@@ -127,7 +127,7 @@ extern int sendData(int fd, int dataType, void* pbuf, int buflen)
 		p_responseBuf->dataSize = buflen;
 		memcpy( p_responseBuf->dataBuf, pbuf, buflen);
 	}
-	deb_print("cmd = %d, buflen = %d\n",dataType, buflen);
+	deb_print("msg size: %d,dataTyte :%d, dataSize: %d\n",sizeof(msg), dataType, buflen);
 	ret = write(fd, p_responseBuf, sizeof(msg));
 	if(ret< 0){
 		perror("socket write error\n");
@@ -244,8 +244,6 @@ int sendBroadCast()
 	fd_set readfd; //读文件描述符集合
 	char buffer[1024];
 	struct timeval timeout;
-	timeout.tv_sec = 2; //超时时间为2秒
-	timeout.tv_usec = 0;
 	msg umsg;
 
 	deb_print(" broadcast \n");
@@ -280,13 +278,14 @@ int sendBroadCast()
 	}
 
 	//将使用的网络接口名字复制到ifr.ifr_name中，由于不同的网卡接口的广播地址是不一样的，因此指定网卡接口
-	//strncpy(ifr.ifr_name, IFNAME, strlen(IFNAME));
+	strncpy(ifr->ifr_name, IFNAME, strlen(IFNAME));
 	//发送命令，获得网络接口的广播地址
 	if (ioctl(sock, SIOCGIFBRDADDR, ifr) == -1)
 	{
 		perror("ioctl error");
 		return -1;
 	}
+
 	//将获得的广播地址复制到broadcast_addr
 	memcpy(&broadcast_addr, (char *)&ifr->ifr_broadaddr, sizeof(struct sockaddr_in));
 
@@ -298,15 +297,12 @@ int sendBroadCast()
 	ret = setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &so_broadcast,
 			sizeof(so_broadcast));
 
-	int times = 1;
-	int i = 0;
-
-	timeout.tv_sec = 2;  
-	timeout.tv_usec = 0;
 	umsg.dataType = BROADCAST;
 	umsg.dataSize = 0;
+
 	ret = sendto(sock,&umsg, sizeof(msg), 0,
 			(struct sockaddr*) &broadcast_addr, sizeof(broadcast_addr));
+
 	close(sock);
 	return 0;
 }
@@ -343,11 +339,22 @@ char* getModuleIp( int id, char* ipaddr )
 }
 
 
-int sendHeartbeat(client pclient)
+int sendHeartbeat(client *pclient)
 {
 	int ret = 0;
-//	struct 
-//	ret = sendData(fd, HEARTBEAT, NULL, 0);
+	int dest_fd;
+	msg umsg;
+	dest_fd = socket(AF_INET, SOCK_DGRAM, 0); 
+	if (dest_fd < 0){
+		perror("sock error");
+		return -1;
+	}
+	struct sockaddr_in dest_addr= pclient->addr;
+	dest_addr.sin_port = PORT2;
+	umsg.dataType = HEARTBEAT;
+	umsg.dataSize = 0;
+	ret = sendto(dest_fd, &umsg, sizeof(msg), 0,
+					 (struct sockaddr*) &dest_addr, sizeof(struct sockaddr));
 	return ret;
 }
 

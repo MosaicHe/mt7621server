@@ -49,10 +49,12 @@ void handleEvent(struct Event* p_Event)
 				pclient->addr = p_Event->addr; 
 				pclient->activeTime = time(NULL);
 				pclient->moduleID = pmsg->id;
-
+			
 				table_insert( client_table, pclient);
+				//set pclient point to where client_table[i] point to,
+				//so, we can change client node by pclient
+				table_get_by_id(client_table, &pclient, pmsg->id);
 			}
-			deb_print("---->module id:%d, state:%d\n",pclient->moduleID, pclient->state);
 			switch(pclient->state){
 				case STATE_IDLE:
 					deb_print("STATE_IDLE\n");
@@ -137,6 +139,7 @@ void handleEvent(struct Event* p_Event)
 										pclient->checkState==RESP_HEAERBEAT ){
 						pthread_mutex_lock(&mutex);
 						pclient->checkState = RESP_IDLE;
+						pclient->activeTime = time(NULL);
 						pthread_mutex_unlock(&mutex);					
 					}
 						
@@ -324,11 +327,10 @@ int main(int argc, char**argv)
 	struct sockaddr_in peer_addr;
 	socklen_t addrlen;
 	addrlen = sizeof(struct sockaddr);
-	
-	pthread_mutex_init (&mutex, NULL);	
+
 	table_init(client_table);
 	list_create(&listHead);
-	
+	pthread_mutex_init(&mutex, NULL);		
 	for(i=0;i<10;i++)
 		modulefds[i]=-1;
 
@@ -355,12 +357,17 @@ int main(int argc, char**argv)
 		FD_SET(udp_fd, &rdfds);
 		maxfd = MAX(server_fd, unix_fd);
 		maxfd = MAX(udp_fd, maxfd);
-
-		timeRemain = HB_TIMEOUT;
 		for(i=0;i<10;i++){
 			if( modulefds[i] != -1 ){
 				FD_SET( modulefds[i], &rdfds);
 				maxfd = MAX(maxfd, modulefds[i]);
+			}
+		}
+		timeRemain = HB_TIMEOUT;
+		for(i=1;i<4;i++){
+			table_get(client_table, &p_client, i);
+			if(p_client != NULL ){
+				timeRemain = MIN(p_client->activeTime, timeRemain);
 			}
 		}
 		deb_print("timeRemain:%ld\n", timeRemain);	
@@ -374,15 +381,16 @@ int main(int argc, char**argv)
 		case 0:
 			/*FIXME*/
 			now = time(NULL);
-#if 0
+
 			for(i=1;i<4;i++){
 				table_get(client_table, &p_client, i);
 				if(p_client != NULL && (p_client->activeTime - now > HB_TIMEOUT) ){
 					//send heartbeat data
-					sendHeartbeat( p_client);	
+					sendHeartbeat( p_client);
+					p_client->checkState = RESP_HEAERBEAT;
 				}
 			}
-#endif
+
 			break;
 
 		default:
