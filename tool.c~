@@ -246,7 +246,7 @@ int sendBroadCast()
 	struct timeval timeout;
 	timeout.tv_sec = 2; //超时时间为2秒
 	timeout.tv_usec = 0;
-	msg umsg;
+	UDPMessage umsg;
 
 	deb_print(" broadcast \n");
 
@@ -305,7 +305,7 @@ int sendBroadCast()
 	timeout.tv_usec = 0;
 	umsg.dataType = BROADCAST;
 	umsg.dataSize = 0;
-	ret = sendto(sock,&umsg, sizeof(msg), 0,
+	ret = sendto(sock,&umsg, sizeof(UDPMessage), 0,
 			(struct sockaddr*) &broadcast_addr, sizeof(broadcast_addr));
 	close(sock);
 	return 0;

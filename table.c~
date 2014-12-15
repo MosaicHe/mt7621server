@@ -57,7 +57,7 @@ int table_insert( client* client_table[], client* p_client)
 		return -1;
 	}
 	memcpy(p, p_client, sizeof(client));
-	client_table[ index ] = p;
+	(*client_table)[ index ] = p;
 	return index;
 }
 

@@ -130,8 +130,6 @@ struct Event{
 #define COMMAND_SUCCEED		104
 #define COMMAND_FAIL		105
 
-#define RESP_IDLE			0
-#define RESP_HEAERBEAT		1
 
 #define CLIENT_RECV 1
 #define UDP_RECV 	2
