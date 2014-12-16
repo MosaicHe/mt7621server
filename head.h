@@ -37,10 +37,10 @@
 #endif	//DEBUG
 
 #define MAXMODULE 4
-
+#define TIMEOUT	 5
 #define DATASIZE    512
 #define PORT 8000
-#define PORT2 8001
+#define PORT2 8002
 #define SRV_IP "192.168.111.1"
 #define INITIP	"192.168.111.1"
 #define N 5

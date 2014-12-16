@@ -47,7 +47,7 @@ void handleEvent(struct Event* p_Event)
 				pclient = (client*)malloc(sizeof(client));
 				pclient->state = STATE_IDLE;
 				pclient->addr = p_Event->addr; 
-				pclient->activeTime = time(NULL);
+				pclient->activeTime = time(NULL)+TIMEOUT;
 				pclient->moduleID = pmsg->id;
 			
 				table_insert( client_table, pclient);
@@ -137,6 +137,7 @@ void handleEvent(struct Event* p_Event)
 				case HEARTBEAT_ACK:
 					if( ! table_get_by_id(client_table, &pclient, pmsg->id) && 
 										pclient->checkState==RESP_HEAERBEAT ){
+						deb_print("receive heartbeatack from module:%d\n",pclient->moduleID);
 						pthread_mutex_lock(&mutex);
 						pclient->checkState = RESP_IDLE;
 						pclient->activeTime = time(NULL);
@@ -161,7 +162,6 @@ void* workthread(void* arg)
 
 	sendBroadCast();
 	while(1){
-		deb_print("************\n");
 		if( list_size(listHead)>0){
 			pthread_mutex_lock(&mutex);
 			list_pop( listHead, &p_ev);
@@ -351,6 +351,7 @@ int main(int argc, char**argv)
 	
 	while(1){
 		// reset rdfds
+		deb_print("hello---------->\n");
 		FD_ZERO(&rdfds);
 		FD_SET(server_fd, &rdfds);
 		FD_SET(unix_fd, &rdfds);
@@ -367,12 +368,11 @@ int main(int argc, char**argv)
 		for(i=1;i<4;i++){
 			table_get(client_table, &p_client, i);
 			if(p_client != NULL ){
-				timeRemain = MIN(p_client->activeTime, timeRemain);
+				timeRemain = MIN( now - p_client->activeTime, timeRemain);
 			}
 		}
 		deb_print("timeRemain:%ld\n", timeRemain);	
 		tv.tv_sec = timeRemain;
-		deb_print("******select*******\n");
 		ret = select( maxfd+1, &rdfds, NULL, NULL, &tv);
 		switch(ret){
 		case -1:
@@ -384,13 +384,13 @@ int main(int argc, char**argv)
 
 			for(i=1;i<4;i++){
 				table_get(client_table, &p_client, i);
-				if(p_client != NULL && (p_client->activeTime - now > HB_TIMEOUT) ){
+				if(p_client != NULL && ( now - p_client->activeTime > HB_TIMEOUT) ){
 					//send heartbeat data
-					sendHeartbeat( p_client);
+					sendHeartbeat( p_client );
 					p_client->checkState = RESP_HEAERBEAT;
+					p_client->activeTime = now;
 				}
 			}
-
 			break;
 
 		default:
@@ -439,7 +439,6 @@ int main(int argc, char**argv)
 				break;
 
 			}else{
-				deb_print("****************\n");
 				for(i=0;i<10;i++){
 					if( modulefds[i]!=-1 && FD_ISSET(modulefds[i], &rdfds) ){
 						deb_print("fd:%d have recieve data\n",modulefds[i]);
@@ -458,8 +457,8 @@ int main(int argc, char**argv)
 							break;
 						}						
 						
-						deb_print("module id:%d, dataType:%d, receive data:%d\n",p_msg->id, p_msg->dataType, p_msg->dataSize);
-						
+						deb_print("module id:%d, dataType:%d, receive data:%d\n",p_msg->id, 
+															p_msg->dataType, p_msg->dataSize);
 						ev.eventType = CLIENT_RECV;
 						ev.pdata = p_msg;
 						ev.sockfd= modulefds[i];

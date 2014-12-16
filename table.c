@@ -101,7 +101,6 @@ int table_get_by_id(client* client_table[], client** p_client, int id)
 	for(i=1;i<TABLE_SIZE-1;i++){
 		if( client_table[i]!=NULL && client_table[i]->moduleID==id){
 			(*p_client) = client_table[i];
-			deb_print("------------>is in-----, state:%d\n", (*p_client)->state);
 			return 0;
 		}
 	}

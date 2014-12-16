@@ -24,7 +24,7 @@
 
 #define IP_FOUND "server_broadcast"
 #define IP_FOUND_ACK "server_broadcast_ack"
-#define IFNAME "wlan0"
+#define IFNAME "eth7"
 #define MCAST_PORT 8001
 
 
@@ -238,8 +238,6 @@ int sendBroadCast()
 	struct ifreq *ifr;
 	struct ifconf ifc;
 	struct sockaddr_in broadcast_addr; //广播地址
-	struct sockaddr_in from_addr; //服务端地址
-	int from_len = sizeof(from_addr);
 	int count = -1;
 	fd_set readfd; //读文件描述符集合
 	char buffer[1024];
@@ -302,7 +300,6 @@ int sendBroadCast()
 
 	ret = sendto(sock,&umsg, sizeof(msg), 0,
 			(struct sockaddr*) &broadcast_addr, sizeof(broadcast_addr));
-
 	close(sock);
 	return 0;
 }
@@ -344,13 +341,15 @@ int sendHeartbeat(client *pclient)
 	int ret = 0;
 	int dest_fd;
 	msg umsg;
+	struct sockaddr_in dest_addr= pclient->addr;
+	
+	deb_print("sendHeartbeat to client:%d\n", pclient->moduleID);
 	dest_fd = socket(AF_INET, SOCK_DGRAM, 0); 
 	if (dest_fd < 0){
 		perror("sock error");
 		return -1;
 	}
-	struct sockaddr_in dest_addr= pclient->addr;
-	dest_addr.sin_port = PORT2;
+	dest_addr.sin_port = htons(MCAST_PORT);
 	umsg.dataType = HEARTBEAT;
 	umsg.dataSize = 0;
 	ret = sendto(dest_fd, &umsg, sizeof(msg), 0,
