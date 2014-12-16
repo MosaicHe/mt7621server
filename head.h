@@ -88,6 +88,7 @@ typedef struct{
 	int  moduleID;
 	int sock_fd;
 	long activeTime;
+	int timeoutCounter;
 	int state;
 	int checkState;
 	struct sockaddr_in addr;
@@ -122,6 +123,7 @@ struct Event{
 #define STATE_FIRMWARE_CHECKED 	2
 #define STATE_CONFIG 			3
 #define STATE_RUN 				4
+#define STATE_DISCONNECT		5
 
 #define BROADCAST			100	
 #define HEARTBEAT 			101

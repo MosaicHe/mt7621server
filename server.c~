@@ -134,7 +134,7 @@ void handleEvent(struct Event* p_Event)
 
 		case UDP_RECV:
 				deb_print(" UDP_RECV \n");
-				switch(pmsg->dataType){
+//				switch(pmsg->dataType){
 //				case HEARTBEAT_ACK:
 //					if( ! table_get_by_id(client_table, &pclient, pmsg->id) && 
 //									pclient->checkState==RESP_HEAERBEAT ){
@@ -149,7 +149,7 @@ void handleEvent(struct Event* p_Event)
 
 //				default:
 //				break;				
-				}
+//				}
 				
 		break;
 
