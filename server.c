@@ -37,7 +37,8 @@ void handleEvent(struct Event* p_Event)
 	moduleInfo md;
 	deb_print("handEvent\n");
 	int sock_fd = p_Event->sockfd;
-
+	
+	deb_print("pmsg->id:%d, pmsg->dataType:%d\n",pmsg->id, pmsg->dataType);
 	switch(p_Event->eventType){
 		case CLIENT_RECV:
 			deb_print("CLIENT_RECV\n");
@@ -135,20 +136,20 @@ void handleEvent(struct Event* p_Event)
 		case UDP_RECV:
 				deb_print(" UDP_RECV \n");
 				switch(pmsg->dataType){
-//				case HEARTBEAT_ACK:
-//					if( ! table_get_by_id(client_table, &pclient, pmsg->id) && 
-//									pclient->checkState==RESP_HEAERBEAT ){
-//						deb_print("receive heartbeatack from module:%d\n",pclient->moduleID);
-//						pthread_mutex_lock(&mutex);
-//						pclient->checkState = RESP_IDLE;
-//						pclient->activeTime = time(NULL)+TIMEOUT;
-//						pclient->timeoutCounter=0;
-//						pthread_mutex_unlock(&mutex);					
-//					}
-//				break;
+				case HEARTBEAT_ACK:
+					if( ! table_get_by_id(client_table, &pclient, pmsg->id) && 
+									pclient->checkState==RESP_HEAERBEAT ){
+						deb_print("receive heartbeatack from module:%d\n",pclient->moduleID);
+						pthread_mutex_lock(&mutex);
+						pclient->checkState = RESP_IDLE;
+						pclient->activeTime = time(NULL)+TIMEOUT;
+						pclient->timeoutCounter=0;
+						pthread_mutex_unlock(&mutex);					
+					}
+				break;
 
-//				default:
-//				break;				
+				default:
+				break;				
 				}
 				
 		break;
@@ -185,19 +186,25 @@ int doWebWork(int fd)
 	int dataType;
 	char buf[128];
 	int buflen;
-//	int finished = 0;
 	int responseType;
+	msg msgbuf;
+	client * p_client;
 	int id;
-	
-	while(1){
-		recvData(fd, &id, &dataType, buf, &buflen, 0);
-		if( dataType == CLOSE )
-			return 0;
-		else{
-			responseType = doCommand(dataType, buf, &buflen);
-			sendData(fd, responseType, buf, buflen);
-		}
+	struct sockaddr_in moduleaddr;
+
+	ret = read(fd, &msgbuf, sizeof(msg));
+	if( ret != sizeof(msg) ){
+		return -1;
 	}
+	pthread_mutex_lock(&mutex)
+	ret=table_get_by_id(client_table, &p_client, msgbuf.id);
+	pthread_mutex_unlock(&mutex);
+	if(ret) 
+		return 0;
+	moduleaddr=p_client->addr;
+	moduleaddr.sin_port = htons(PORT2);
+	sendData(fd, NVRAM_SET, msgbuf.dataBuf, msgbuf.dataSize);
+	
 }
 
 
@@ -353,7 +360,6 @@ int main(int argc, char**argv)
 	
 	while(1){
 		// reset rdfds
-		deb_print("hello---------->\n");
 		FD_ZERO(&rdfds);
 		FD_SET(server_fd, &rdfds);
 		FD_SET(unix_fd, &rdfds);
@@ -367,14 +373,15 @@ int main(int argc, char**argv)
 			}
 		}
 		timeRemain = HB_TIMEOUT;
+		now = time(NULL);
 		for(i=1;i<4;i++){
 			table_get(client_table, &p_client, i);
 			if(p_client != NULL ){
-				timeRemain = MIN( p_client->activeTime - now, timeRemain);
+					timeRemain = MIN( p_client->activeTime - now, timeRemain);
 			}
 		}
-		deb_print("timeRemain:%ld\n", timeRemain);
 		tv.tv_sec = (timeRemain<0)?0:timeRemain;
+		tv.tv_usec = timeRemain?1:0;
 		deb_print("tv.tv_sec:%ld\n", tv.tv_sec);
 		ret = select( maxfd+1, &rdfds, NULL, NULL, &tv);
 		switch(ret){
@@ -384,23 +391,26 @@ int main(int argc, char**argv)
 		case 0:
 			/*FIXME*/
 			now = time(NULL);
+			deb_print(" select timeout\n");
 			for(i=1;i<4;i++){
 				table_get(client_table, &p_client, i);
-				if(p_client != NULL && ( now > p_client->activeTime) ){
+				if(p_client != NULL && ( now >= p_client->activeTime) ){
 					//send heartbeat data
 					switch(p_client->checkState){
 					case RESP_IDLE:
 						sendHeartbeat( p_client );
 						p_client->checkState = RESP_HEAERBEAT;
 						p_client->activeTime = now+TIMEOUT;
-						break;
-					case RESP_HEAERBEAT:
-						p_client->timeoutCounter++;
-						if(p_client->timeoutCounter>2){
-							/* FIXME */				
-						}
+						deb_print("-->activeTime:%ld, now:%d<---\n",p_client->activeTime, now);
 						break;
 					default:
+						deb_print("*******checkState:%d,timeoutCounter%d\n",p_client->checkState, p_client->timeoutCounter);
+						p_client->timeoutCounter++;
+						p_client->activeTime = now+2;
+						if(p_client->timeoutCounter>2){
+							/* FIXME */	
+							table_delete(client_table, p_client);	
+						}
 						break;
 					}
 				}
@@ -432,9 +442,10 @@ int main(int argc, char**argv)
 				break;
 			}else if( FD_ISSET(udp_fd, &rdfds)){
 				p_msg = (msg*)malloc(sizeof(msg));
-				ret = recvfrom( udp_fd, &p_msg, sizeof(msg), 0,
+				ret = recvfrom( udp_fd, p_msg, sizeof(msg), 0,
 						           (struct sockaddr*)&peer_addr, &addrlen);
-				deb_print("receive data size:%d\n",ret);
+				deb_print("receive data size:%d, id:%d\n",ret,p_msg->id);
+				deb_print(" p_msg->dataType:%d\n", p_msg->dataType);
 				if(ret != sizeof(msg)){
 					free(p_msg);
 					break;

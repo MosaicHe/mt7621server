@@ -24,7 +24,7 @@
 
 #define IP_FOUND "server_broadcast"
 #define IP_FOUND_ACK "server_broadcast_ack"
-#define IFNAME "wlan0"
+#define IFNAME "eth7"
 #define MCAST_PORT 8001
 
 

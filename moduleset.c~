@@ -1,0 +1,83 @@
+#include "head.h"
+#include <sys/un.h>
+#define UNIX_DOMAIN "/tmp/UNIX.domain"
+
+typedef struct{
+	unsigned char id;
+	unsigned int dataType;
+	unsigned int dataSize;
+	char dataBuf[DATASIZE];
+}msg;
+
+int sendData(int fd, int dataType, void* pbuf, int buflen)
+{
+	int ret  = -1;
+	msg *p_responseBuf;
+	p_responseBuf = (msg*)malloc(sizeof(msg));
+	bzero( p_responseBuf, sizeof(msg));
+
+	p_responseBuf->dataType = dataType;
+	if( buflen > 0 && pbuf != NULL){
+		p_responseBuf->dataSize = buflen;
+		memcpy( p_responseBuf->dataBuf, pbuf, buflen);
+	}
+	deb_print("msg size: %d,dataTyte :%d, dataSize: %d\n",sizeof(msg), dataType, buflen);
+	ret = write(fd, p_responseBuf, sizeof(msg));
+	if(ret< 0){
+		perror("socket write error\n");
+		free(p_responseBuf);
+		return -1;
+	}
+	free(p_responseBuf);
+
+	return 0;
+}
+
+void showUsge()
+{
+	printf("moduleset Usge:\n")
+	printf("\t moduleset $moduleId [$nvramDev] $item $value\n");
+	printf("\t Example: moduleset 1 rt2860 SSID1 OPENAP\n");
+}
+
+int main(int argc, char** argv )
+{
+    int connect_fd;
+    int ret;
+    char snd_buf[1024];
+	int cmd;
+	int len;
+    static struct sockaddr_un srv_addr;
+    	
+	if( argc!=4 && argc!=5){
+		showUsge();
+	}
+
+    //creat unix socket
+    connect_fd=socket(PF_UNIX,SOCK_STREAM,0);
+    if(connect_fd<0)
+    {
+        perror("cannot create communication socket");
+        return -1;
+    }   
+    srv_addr.sun_family=AF_UNIX;
+    strcpy(srv_addr.sun_path,UNIX_DOMAIN);
+    
+    //connect server
+    ret=connect(connect_fd,(struct sockaddr*)&srv_addr,sizeof(srv_addr));
+    if(ret == -1)
+    {
+        perror("cannot connect to the server");
+        close(connect_fd);
+        return -1;
+    }
+    memset(snd_buf,0,1024);  
+    //send info server
+    cmd = GET_SSID;
+    sendData(connect_fd, cmd, NULL, 0);
+	printf("get data: %s\n", snd_buf);
+	
+	sendData(connect_fd, 0, NULL, 0);
+    
+    return -1;
+}
