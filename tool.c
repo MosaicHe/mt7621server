@@ -24,7 +24,7 @@
 
 #define IP_FOUND "server_broadcast"
 #define IP_FOUND_ACK "server_broadcast_ack"
-#define IFNAME "eth7"
+#define IFNAME "wlan0"
 #define MCAST_PORT 8001
 
 
@@ -127,7 +127,7 @@ extern int sendData(int fd, int dataType, void* pbuf, int buflen)
 		p_responseBuf->dataSize = buflen;
 		memcpy( p_responseBuf->dataBuf, pbuf, buflen);
 	}
-	deb_print("msg size: %d,dataTyte :%d, dataSize: %d\n",sizeof(msg), dataType, buflen);
+	deb_print("msg size: %ld, dataTyte :%d, dataSize: %d\n",sizeof(msg), dataType, buflen);
 	ret = write(fd, p_responseBuf, sizeof(msg));
 	if(ret< 0){
 		perror("socket write error\n");
@@ -184,48 +184,19 @@ extern int sendFirmware(int connfd){
 /*
  * function: read data from socket
  */
-extern int recvData(int fd, int *id,  int *dataType, void* buf, int* buflen, int time)
+extern int recvData(int fd, msg* msgbuf, struct timeval* ptv)
 {
 
 	int ret =-1;
-#if 0
-	msg msgbuf;
 	fd_set rdfds;
-	struct timeval *p_tv;
-
 	FD_ZERO(&rdfds);
 	FD_SET(fd, &rdfds);
 
-	if(time <= 0 ){
-		p_tv = NULL;
-	}else{
-		p_tv = (struct timeval*)malloc(sizeof(struct timeval));
-		p_tv->tv_sec = time;
-		p_tv->tv_usec = 0;
+	ret = select(fd+1,&rdfds, NULL, NULL, ptv);
+	if(ret<0||ret==0){
+		return ret;
 	}
-	ret = select(fd+1, &rdfds, NULL, NULL, p_tv);
-	if(ret < 0){
-		perror("select error!\n");
-	}else if(ret == 0 ){
-		deb_print("select timeout\n");
-	}else{
-		ret = read(fd, &msgbuf, sizeof(msg));
-		if(ret<0){
-			perror("Socket ead error\n");
-			return -1;
-		}
-		
-		*id = msgbuf.id;
-		*dataType = msgbuf.cmd;
-		*buflen = msgbuf.bufsize;
-		if( buflen != 0)
-			memcpy(buf, msgbuf.buf, msgbuf.bufsize);
-		return 0;
-	}
-	
-	if(time > 0)
-		free(p_tv);
-#endif
+	ret = read(fd, msgbuf, sizeof(msg));
 	return ret;
 }
 
@@ -244,7 +215,7 @@ int sendBroadCast()
 	struct timeval timeout;
 	msg umsg;
 
-	deb_print(" broadcast \n");
+	deb_print("send broadcast \n");
 
 	//建立数据报套接字
 	sock = socket(AF_INET, SOCK_DGRAM, 0);

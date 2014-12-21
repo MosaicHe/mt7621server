@@ -95,7 +95,7 @@ int table_get_by_id(client* client_table[], client** p_client, int id)
 {
 	int i;
 	if(id<1 || id > 3){
-		printf("Id:%d is error\n");
+		printf("Id:%d is error\n",id);
 		return -1;
 	}
 	for(i=1;i<TABLE_SIZE-1;i++){

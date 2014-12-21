@@ -1,7 +1,6 @@
 #ifndef __CLIENT_H
 #define __CLIENT_H
-
-#include <sys/types.h>     
+    
 #include <sys/socket.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +23,7 @@
 #include <fcntl.h> 
 #include <assert.h> 
 
-#include "list.h"
+//#include "list.h"
 
 #define DEBUG
 
@@ -39,8 +38,8 @@
 #define MAXMODULE 4
 #define TIMEOUT	 5
 #define DATASIZE    512
-#define PORT 8000
-#define PORT2 8002
+#define PORT 				8000
+#define MODULE_PORT 		8002
 #define SRV_IP "192.168.111.1"
 #define INITIP	"192.168.111.1"
 #define N 5
@@ -50,7 +49,7 @@
 #define TMPFILE "modules.tmp"
 
 //unix domain socket
-#define UNIX_DOMAIN  "/tmp/UNIX.domain"
+#define UNIX_DOMAIN  "./UNIX.domain"
 
 
 // send2server flag
@@ -97,7 +96,7 @@ typedef struct{
 
 
 typedef struct{
-	char nvramDev[6];  // "2860" or "rtdev"
+	char nvramDev[8];  // "rt2860" or "rtdev"
 	char item[128];
 	char value[128];
 }moduleNvramCmd;
@@ -110,13 +109,19 @@ struct Event{
 	struct sockaddr_in addr;	
 };
 
-#define REQ_HELLO   		1
+struct moduleSocketInfo{
+	int fd;
+ 	struct sockaddr_in addr;
+};
+
+#define REQ_REGISTER		1
 #define REQ_FIRTWARE_UPDATE 2
 #define REQ_CONFIG		    3
 #define REQ_RUN 			4
+#define REQ_REPORT			6
 
-#define ERROR			   -1			
-
+#define RESP_ERROR			-1			
+#define RESP_SUCCESS		 0
 
 #define STATE_IDLE 				0
 #define STATE_HELLO 			1
@@ -140,6 +145,12 @@ struct Event{
 
 #define CLIENT_RECV 1
 #define UDP_RECV 	2
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; 
+
+#define LOCK_CLIENT_TABLE 	pthread_mutex_lock(&mutex);
+#define UNLOCK_CLIENT_TABLE pthread_mutex_unlock(&mutex);
+
 
 #endif  // __CLIENT_H
 

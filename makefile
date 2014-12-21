@@ -5,7 +5,7 @@ EXEC = server
 
 all: $(EXEC)
 
-$(EXEC): $(EXEC).c  table.c tool.c list.c
+$(EXEC): $(EXEC).c  table.c tool.c udthread.c workthread.c pingthread.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lpthread
 
 romfs:

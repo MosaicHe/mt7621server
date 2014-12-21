@@ -1,7 +1,28 @@
-#include "head.h"
-#include <sys/un.h>
-#define UNIX_DOMAIN "/tmp/UNIX.domain"
+#include <sys/socket.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <strings.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <pthread.h>
+#include <string.h>
+#include <time.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <sys/syscall.h>
+#include <sys/select.h>
+#include <sys/times.h>
+#include <sys/types.h>
+#include <fcntl.h> 
+#include <assert.h> 
+#include <sys/un.h> 
 
+#define UNIX_DOMAIN "./UNIX.domain"
+#define DATASIZE 512
 typedef struct{
 	unsigned char id;
 	unsigned int dataType;
@@ -9,33 +30,18 @@ typedef struct{
 	char dataBuf[DATASIZE];
 }msg;
 
-int sendData(int fd, int dataType, void* pbuf, int buflen)
-{
-	int ret  = -1;
-	msg *p_responseBuf;
-	p_responseBuf = (msg*)malloc(sizeof(msg));
-	bzero( p_responseBuf, sizeof(msg));
+typedef struct{
+	char nvramDev[8];  // "rt2860" or "rtdev"
+	char item[128];
+	char value[128];
+}moduleNvram;
 
-	p_responseBuf->dataType = dataType;
-	if( buflen > 0 && pbuf != NULL){
-		p_responseBuf->dataSize = buflen;
-		memcpy( p_responseBuf->dataBuf, pbuf, buflen);
-	}
-	deb_print("msg size: %d,dataTyte :%d, dataSize: %d\n",sizeof(msg), dataType, buflen);
-	ret = write(fd, p_responseBuf, sizeof(msg));
-	if(ret< 0){
-		perror("socket write error\n");
-		free(p_responseBuf);
-		return -1;
-	}
-	free(p_responseBuf);
-
-	return 0;
-}
+#define NVRAM_SET			106
+#define NVRAM_GET			107
 
 void showUsge()
 {
-	printf("moduleset Usge:\n")
+	printf("moduleset Usge:\n");
 	printf("\t moduleset $moduleId [$nvramDev] $item $value\n");
 	printf("\t Example: moduleset 1 rt2860 SSID1 OPENAP\n");
 }
@@ -48,7 +54,9 @@ int main(int argc, char** argv )
 	int cmd;
 	int len;
 	int moduleId;
-    static struct sockaddr_un srv_addr;
+	moduleNvram mn;
+	msg umsg;
+    struct sockaddr_un srv_addr;
     	
 	if( argc!=4 && argc!=5){
 		showUsge();
@@ -56,12 +64,20 @@ int main(int argc, char** argv )
 	}
 	
 	moduleId = atoi(argv[1]);
-	if(0>module || module>3){
+	if(0>moduleId || moduleId>3){
 		printf("moduleId should be 1-3");
 		return -1;
 	}
-		
-
+	if( argc==5){
+		strcpy(mn.nvramDev,	argv[2]);
+		strcpy(mn.item, argv[3]);
+		strcpy(mn.value, argv[4]);
+	}	
+	else{
+		strcpy(mn.nvramDev, "rt2860");
+		strcpy(mn.item, argv[2]);
+		strcpy(mn.value, argv[3]);
+	}
     //creat unix socket
     connect_fd=socket(PF_UNIX,SOCK_STREAM,0);
     if(connect_fd<0)
@@ -70,23 +86,27 @@ int main(int argc, char** argv )
         return -1;
     }   
     srv_addr.sun_family=AF_UNIX;
-    strcpy(srv_addr.sun_path,UNIX_DOMAIN);
+    strcpy(srv_addr.sun_path, UNIX_DOMAIN);
     
     //connect server
-    ret=connect(connect_fd,(struct sockaddr*)&srv_addr,sizeof(srv_addr));
-    if(ret == -1)
+    ret=connect(connect_fd,(struct sockaddr*)&srv_addr, sizeof(srv_addr));
+    if(ret<0)
     {
         perror("cannot connect to the server");
         close(connect_fd);
         return -1;
     }
-    memset(snd_buf,0,1024);  
+ 	printf("connect to server\n");
     //send info server
-    cmd = GET_SSID;
-    sendData(connect_fd, cmd, NULL, 0);
-	printf("get data: %s\n", snd_buf);
+	umsg.id = moduleId;
+	umsg.dataSize = sizeof(moduleNvram);
+	umsg.dataType = NVRAM_SET;
+	memcpy(umsg.dataBuf, &mn, sizeof(moduleNvram));
+
+    write( connect_fd, &umsg, sizeof(msg));
 	
-	sendData(connect_fd, 0, NULL, 0);
-    
+	read(connect_fd, &umsg, sizeof(msg));
+    printf("%s\n", umsg.dataBuf);
+
     return -1;
 }
