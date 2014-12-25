@@ -40,13 +40,6 @@
 #define DATASIZE    512
 #define PORT 				8000
 #define MODULE_PORT 		8002
-#define SRV_IP "192.168.111.1"
-#define INITIP	"192.168.111.1"
-#define N 5
-
-#define CLIENT_IP "192.168.111.2"
-
-#define TMPFILE "modules.tmp"
 
 //unix domain socket
 #define UNIX_DOMAIN  "./UNIX.domain"
@@ -138,7 +131,10 @@ struct moduleSocketInfo{
 #define COMMAND_FAIL		105
 
 #define NVRAM_SET			106
-
+#define NVRAM_GET			107
+#define INIT_INTERNET		108
+#define SET_STALIMIT		109
+#define GET_MACLIST			110
 
 #define RESP_IDLE			0
 #define RESP_HEAERBEAT		1

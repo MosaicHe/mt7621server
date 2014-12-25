@@ -93,7 +93,7 @@ int openListenTcpSocket()
 		exit(1);
 	}
 
-	if( listen(server_fd,N) < 0)
+	if( listen(server_fd,5) < 0)
 	{
 		perror("listen");
 		exit(1);
@@ -151,6 +151,7 @@ int main(int argc, char**argv)
 			pmsi = (struct moduleSocketInfo*)malloc(sizeof(struct moduleSocketInfo));
 			pmsi->fd = cli_fd;
 			pmsi->addr = peer_addr;
+			deb_print("ip:%s connected\n",inet_ntoa(peer_addr.sin_addr));
 			ret=pthread_create( &ptd, NULL, workThread, pmsi);
 			if(ret<0){
 				perror("pthread_create error!\n");

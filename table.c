@@ -146,6 +146,7 @@ int table_free( client* client_table[])
 
 void table_write( client* client_table[] )
 {
+#if 0
 	int i;
 	FILE * fp;
     fp=fopen( TMPFILE, "wb");
@@ -157,6 +158,7 @@ void table_write( client* client_table[] )
 		fwrite( client_table[i], sizeof( client), 1, fp);
 	}
 	fclose(fp);
+#endif
 }
 
 

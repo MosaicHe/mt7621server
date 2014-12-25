@@ -21,7 +21,8 @@ void* udThread( void* arg)
 		strcpy(umsg.dataBuf, "Error:module ID doesn't exist!\n");
 		umsg.dataSize= strlen(umsg.dataBuf)+1;
 		ret=write(udFd, &umsg, sizeof(umsg));
-	}else{
+	}
+	else{
 		moduleFd = socket(PF_INET,SOCK_STREAM,0);
 		if(moduleFd < 0){
 			perror("can't open socket\n");
@@ -29,17 +30,28 @@ void* udThread( void* arg)
 		}
 		moduleAddr =pclient->addr;
 		moduleAddr.sin_port = htons(MODULE_PORT);
+
 		ret = connect(moduleFd, (struct sockaddr*)&moduleAddr, sizeof(struct sockaddr));
 		if(ret < 0){
-			printf("can not connect to module\n");
+			printf("can not connect to module:\n");
 			strcpy(umsg.dataBuf, "Error:can not connect to module!\n");
 			umsg.dataSize= strlen(umsg.dataBuf)+1;
 			ret=write(udFd, &umsg, sizeof(umsg));
+			return;
 		}
 		ret=write(moduleFd, &umsg, sizeof(msg));
 		tv.tv_sec=1;
-		tv.tv_usec=0;		
+		tv.tv_usec=0;
+		deb_print("recv data form module\n");	
 		ret = recvData(moduleFd, &umsg, &tv);
-		write(udFd, &umsg, sizeof(umsg));
+		if(ret<sizeof(msg)){
+			printf("module data error\n");
+			strcpy(umsg.dataBuf, "Error:module data error!\n");
+			umsg.dataSize= strlen(umsg.dataBuf)+1;
+			ret=write(udFd, &umsg, sizeof(umsg));
+			return;
+		}
+		deb_print("send data to unixdomain\n");
+		write(udFd, &umsg, sizeof(msg));
 	}
 }
