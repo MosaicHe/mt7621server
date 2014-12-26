@@ -11,7 +11,7 @@
 //#include "list.h"
 #include "workthread.h"
 #include "pingthread.h"
-#include "udthread.h"
+#include "handleweb.h"
 
 
 #define HB_TIMEOUT 5
@@ -166,11 +166,7 @@ int main(int argc, char**argv)
 				unlink(UNIX_DOMAIN);
 				exit(-1);
 			}
-			ret=pthread_create( &ptd, NULL, udThread, &cli_fd);
-			if(ret<0){
-				perror("pthread_create error!\n");
-				exit(-1);
-			}
+			handleUnixdomainSocket(cli_fd);
 		}
 	}
 

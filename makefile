@@ -5,14 +5,14 @@ EXEC = server
 
 all: $(EXEC) module_set module_get
 
-$(EXEC): $(EXEC).c  table.c tool.c udthread.c workthread.c pingthread.c
+$(EXEC): $(EXEC).c  table.c tool.c handleweb.c workthread.c pingthread.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lpthread
 
-module_set: moduleset.c
-	$(CC) -o module_set moduleset.c
+module_set: moduleset.c module.c
+	$(CC) -o module_set moduleset.c module.c
 
-module_get: moduleget.c
-	$(CC) -o module_get moduleget.c
+module_get: moduleget.c module.c
+	$(CC) -o module_get moduleget.c module.c
 
 
 romfs:
