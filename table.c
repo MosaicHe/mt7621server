@@ -99,9 +99,11 @@ int table_get_by_id(client* client_table[], client** p_client, int id)
 		return -1;
 	}
 	for(i=1;i<TABLE_SIZE-1;i++){
-		if( client_table[i]!=NULL && client_table[i]->moduleID==id){
-			(*p_client) = client_table[i];
-			return 0;
+		if( client_table[i]!=NULL){
+			if(client_table[i]->moduleID==id){
+				(*p_client) = client_table[i];
+				return 0;
+			}
 		}
 	}
 	

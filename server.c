@@ -158,7 +158,6 @@ int main(int argc, char**argv)
 				exit(-1);
 			}
 		}else if(FD_ISSET(unix_fd, &rdfds)){
-			deb_print("%d\n", unix_fd);
 			cli_fd=accept(unix_fd, NULL, NULL);
 			if(temp_fd<0){
 				perror("cannot accept client connect request\n");
