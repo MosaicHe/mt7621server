@@ -7,3 +7,4 @@ extern int testModuleOn();
 extern int sendFirmware();
 extern char* getModulefwVersion();
 extern int sendHeartbeat( client *pclient);
+extern void printModuleInfo( moduleInfo *m);

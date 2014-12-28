@@ -41,6 +41,22 @@ enum {
 	gpio_out,
 };
 
+
+void printModuleInfo(moduleInfo *m)
+{
+	printf("Module information:\n");
+
+	printf("\tra0   state:%d\n",m->state_24g);
+	printf("\tra0    SSID:%s\n",m->ssid_24g);
+	printf("\tra0 Channel:%d\n",m->channel_24g);
+	printf("\tra0 	  mac:%s\n",m->mac_24g);
+
+	printf("\trai0   state:%d\n",m->state_5g);
+	printf("\trai0    SSID:%s\n",m->ssid_5g);
+	printf("\trai0 Channel:%d\n",m->channel_5g);
+	printf("\trai0 	   mac:%s\n",m->mac_5g);
+}
+
 extern int testModuleOn()
 {
 	int fd, req;

@@ -340,7 +340,8 @@ int getModuleIfExist(int moduleId, char* ifname)
 	Request r;
 	r.moduleId =moduleId;
 	r.requst = REQ_IF_EXIST;
-	
+	strcpy(r.data, ifname);
+	printf("ifname:%s\n", ifname);
 	ret = write( connect_fd, &r, sizeof(Request));
 	if(ret!= sizeof(Request))
 		return -1;
@@ -404,12 +405,13 @@ int getModuleMac(int moduleId, char* ifname, char* mac)
 	return 0;
 }
 
-int getModuleIp(int moduleId, char** ip)
+int getModuleIp(int moduleId, char* ip)
 {
 	int ret;
 	int connect_fd;
 	fd_set rdfds;
 	struct timeval tv;
+	char* value;
 
 	if(0>moduleId || moduleId>3){
 		printf("moduleId should be 1-3");
@@ -438,9 +440,7 @@ int getModuleIp(int moduleId, char** ip)
 	}else{
 		bzero(&r, sizeof(Request));
 		read(connect_fd, &r, sizeof(r));
-		printf("moduleId:%d, ip:%s, len:%d\n", moduleId, r.data, strlen(r.data));
-		memcpy( *ip, r.data, strlen(r.data)+1);
-		printf("moduleId:%d, ip:%s\n", moduleId, *ip);
+		memcpy( ip, r.data, strlen(r.data)+1);
 	}
 	close(connect_fd);
 	return 0;
