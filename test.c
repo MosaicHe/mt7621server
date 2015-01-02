@@ -7,7 +7,7 @@ int main(int argc, char** argv)
 	char mac[128];
 	char *ipaddr;
 
-	i=1;
+	i=2;
 	ipaddr = (char*)malloc(128);
 
 	if( getModuleExist(i) != 1 ){
@@ -16,12 +16,14 @@ int main(int argc, char** argv)
 		printf("module %d exist!\n", i);
 		
 		bzero(ipaddr, 128);
-		getModuleIp(i, &ipaddr);
+		getModuleIp(i, ipaddr);
 		printf("module %d ip : %s\n", i, ipaddr);
 	
 		free(ipaddr);
 	}
 
+	moduleSystem(2, "ifconfig ra0 down");
+		
 #if 0
 	printf("module %d exist!\n");
 

@@ -37,6 +37,8 @@ int handleModuleRegister()
 	memcpy(&pclient->mdInfo, pmsg->dataBuf, sizeof(moduleInfo));
 	pclient->state = STATE_HELLO;
 	UNLOCK_CLIENT_TABLE;
+	
+	writeModuleInfo2Nvram(pclient->moduleID, &pclient->mdInfo );
 
 	ret= sendData( moduleFd, RESP_SUCCESS, NULL, 0);
 	if(ret<0){
@@ -45,7 +47,6 @@ int handleModuleRegister()
 		UNLOCK_CLIENT_TABLE;
 		return -1;	
 	}
-
 	while(1){
 		tv.tv_sec = READ_TIMEOUT;
 		ret = recvData(moduleFd, pmsg, &tv);

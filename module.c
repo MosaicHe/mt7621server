@@ -50,8 +50,6 @@ typedef struct{
 #define REQ_MAC				3
 #define REQ_IP				4
 
-
-
 #define NVRAM_SET			106
 #define NVRAM_GET			107
 #define NVRAM_SET_COMMIT	111
@@ -59,6 +57,7 @@ typedef struct{
 #define SET_STALIMIT		109
 #define GET_MACLIST			110
 #define GET_MACNUM			112
+#define SYSTEM_CMD			113
 
 int connect2Server( )
 {
@@ -164,7 +163,7 @@ int module_get(int moduleId, char *nvramDev, char* item, char* value)
 		return -1;
 	}else{
 		read(connect_fd, &umsg, sizeof(msg));
-		memcpy(value, umsg.dataBuf, sizeof(umsg.dataBuf));
+		memcpy(value, umsg.dataBuf, strlen(umsg.dataBuf));
 	}
 	close(connect_fd);
     return 0;
@@ -218,6 +217,34 @@ int module_set(int moduleId, char *nvramDev, char* item, char* value)
     return 0;
 }
 
+int moduleSystem(int moduleId, char* s)
+{
+	int connect_fd;
+	msg umsg;
+	int ret =-1;
+
+	if(0>moduleId || moduleId>3){
+		printf("moduleId should be 1-3");
+		return -1;
+	}
+	connect_fd = connect2Module(moduleId);
+	if(connect_fd<0){
+		return -1;
+	}
+	printf("%s\n", s);
+	bzero(&umsg, sizeof(msg));
+	umsg.id = moduleId;
+	umsg.dataType = SYSTEM_CMD;
+	memcpy(umsg.dataBuf, s, strlen(s));
+	umsg.dataSize=strlen(umsg.dataBuf);
+
+	ret = write( connect_fd, &umsg, sizeof(msg));
+	if(ret!= sizeof(msg)){
+		close(connect_fd);
+		return -1;
+	}
+	return 0;
+}
 
 int module_set_commit(int moduleId, char *nvramDev)
 {
@@ -340,7 +367,8 @@ int getModuleIfExist(int moduleId, char* ifname)
 	Request r;
 	r.moduleId =moduleId;
 	r.requst = REQ_IF_EXIST;
-	
+	strcpy(r.data, ifname);
+	printf("ifname:%s\n", ifname);
 	ret = write( connect_fd, &r, sizeof(Request));
 	if(ret!= sizeof(Request))
 		return -1;
@@ -404,12 +432,13 @@ int getModuleMac(int moduleId, char* ifname, char* mac)
 	return 0;
 }
 
-int getModuleIp(int moduleId, char** ip)
+int getModuleIp(int moduleId, char* ip)
 {
 	int ret;
 	int connect_fd;
 	fd_set rdfds;
 	struct timeval tv;
+	char* value;
 
 	if(0>moduleId || moduleId>3){
 		printf("moduleId should be 1-3");
@@ -438,9 +467,7 @@ int getModuleIp(int moduleId, char** ip)
 	}else{
 		bzero(&r, sizeof(Request));
 		read(connect_fd, &r, sizeof(r));
-		printf("moduleId:%d, ip:%s, len:%d\n", moduleId, r.data, strlen(r.data));
-		memcpy( *ip, r.data, strlen(r.data)+1);
-		printf("moduleId:%d, ip:%s\n", moduleId, *ip);
+		memcpy( ip, r.data, strlen(r.data)+1);
 	}
 	close(connect_fd);
 	return 0;

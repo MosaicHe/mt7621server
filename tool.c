@@ -14,7 +14,7 @@
 #include <net/if.h>
 #include <sys/stat.h>
 #include <errno.h>
-
+#include "nvram.h"
 //#include "ralink_gpio.h"
 
 #include "head.h"
@@ -199,6 +199,55 @@ extern int recvData(int fd, msg* msgbuf, struct timeval* ptv)
 	ret = read(fd, msgbuf, sizeof(msg));
 	return ret;
 }
+
+extern int writeModuleInfo2Nvram(int id, moduleInfo* pm)
+{
+	char pre[10];
+	char field[128];
+	char state[2];
+	char channel_s[10];
+
+	sprintf(pre,"Module%d", id);
+
+	sprintf(field, "%sSN", pre);	
+	nvram_bufset(RT2860_NVRAM, field, pm->SN);
+
+	sprintf(field, "%sfwVersion", pre);	
+	nvram_bufset(RT2860_NVRAM, field, pm->fwVersion);
+
+	// 24g info
+	sprintf(field, "%sstate_24g", pre);
+	sprintf(state, "%d", pm->state_24g);
+	nvram_bufset(RT2860_NVRAM, field, state);
+
+	sprintf(field, "%sssid_24g", pre);	
+	nvram_bufset(RT2860_NVRAM, field, pm->ssid_24g);
+
+	sprintf(field, "%smac_24g", pre);
+	nvram_bufset(RT2860_NVRAM, field, pm->mac_24g);
+
+	sprintf(field, "%schannel_24g", pre);
+	sprintf( channel_s, "%d", pm->channel_24g);
+	nvram_bufset(RT2860_NVRAM, field, channel_s);
+	
+	// 5g info
+	sprintf(field, "%sstate_5g", pre);
+	sprintf(state, "%d", pm->state_5g);
+	nvram_bufset(RT2860_NVRAM, field, state);
+
+	sprintf(field, "%sssid_5g", pre);	
+	nvram_bufset(RT2860_NVRAM, field, pm->ssid_5g);
+
+	sprintf(field, "%smac_5g", pre);
+	nvram_bufset(RT2860_NVRAM, field, pm->mac_5g);
+
+	sprintf(field, "%schannel_5g", pre);
+	sprintf( channel_s, "%d", pm->channel_5g);
+	nvram_bufset(RT2860_NVRAM, field, channel_s);
+	
+	nvram_commit(RT2860_NVRAM);
+}
+
 
 int sendBroadCast()
 {
