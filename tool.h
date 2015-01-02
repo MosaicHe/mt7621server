@@ -8,3 +8,4 @@ extern int sendFirmware();
 extern char* getModulefwVersion();
 extern int sendHeartbeat( client *pclient);
 int writeModuleInfo2Nvram(int id, moduleInfo* pm);
+extern void printModuleInfo( moduleInfo *m);

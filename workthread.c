@@ -28,8 +28,10 @@ int handleModuleRegister()
 		pclient->activeTime = time(NULL)+READ_TIMEOUT;
 		pclient->moduleID = pmsg->id;
 		pclient->timeoutCounter=0;
+		memcpy(&pclient->mdInfo, pmsg->dataBuf, sizeof(moduleInfo));
 		table_insert( client_table, pclient);
-
+		deb_print("24G state:%d,5G state:%d\n",pclient->mdInfo.state_24g, pclient->mdInfo.state_5g);
+		printModuleInfo( &(pclient->mdInfo));
 		//set pclient point to where client_table[i] point to,
 		//so we can change client node by pclient
 		table_get_by_id(client_table, &pclient, pmsg->id);

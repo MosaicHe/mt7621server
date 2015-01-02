@@ -18,7 +18,7 @@ int main(int argc, char** argv )
 	}
 	
 	moduleId = atoi(argv[1]);
-	if(0>moduleId || moduleId>3){
+	if( moduleId<1 || moduleId>3){
 		printf("moduleId should be 1-3");
 		return -1;
 	}
