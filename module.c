@@ -235,7 +235,7 @@ int moduleSystem(int moduleId, char* s)
 	bzero(&umsg, sizeof(msg));
 	umsg.id = moduleId;
 	umsg.dataType = SYSTEM_CMD;
-	memcpy(umsg.dataBuf, s, strlen(s));
+	memcpy(umsg.dataBuf, s, strlen(s)+1);
 	umsg.dataSize=strlen(umsg.dataBuf);
 
 	ret = write( connect_fd, &umsg, sizeof(msg));
