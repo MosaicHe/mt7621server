@@ -4,7 +4,7 @@
 
 #define PING_
 #define PING_PORT 8003
-#define TIMEOUTLIMIT 5
+#define TIMEOUTLIMIT 3
 
 void *pingThread(void* arg)
 {
@@ -34,31 +34,31 @@ void *pingThread(void* arg)
 				sendto(udpFd, &umsg, sizeof(msg), 0,
 						(struct sockaddr*)&(pclient->addr), sizeof(struct sockaddr));
 				deb_print("sendto heartbeat to module:%d\n", pclient->moduleID );
-				FD_ZERO(&rdfds);
-				FD_SET(udpFd, &rdfds);
-				tv.tv_sec = 1;
-				tv.tv_usec= 0;
-				ret = select(udpFd+1, &rdfds, NULL, NULL, &tv);
-				if(ret<0){
-					return;		
-				}else if(ret==0){
-					pclient->timeoutCounter++;
-					deb_print("module:%d heartbeat lost %d\n", pclient->moduleID, pclient->timeoutCounter);
-					if(pclient->timeoutCounter > TIMEOUTLIMIT){
-						LOCK_CLIENT_TABLE;
-						table_delete(client_table, pclient);
-						UNLOCK_CLIENT_TABLE;
-					}
-				}else{
-					ret = recvfrom(udpFd, &umsg, sizeof(msg), 0,
-								NULL, NULL);
-					if(umsg.dataType == HEARTBEAT_ACK){
-						deb_print("recvfrom heartbeat_ack from module:%d\n", pclient->moduleID );
-						pclient->timeoutCounter=0;			
-					}	
-				}		
 			}
 		}
-		sleep(9);
+		FD_ZERO(&rdfds);
+		FD_SET(udpFd, &rdfds);
+		tv.tv_sec = 1;
+		tv.tv_usec= 0;
+		ret = select(udpFd+1, &rdfds, NULL, NULL, &tv);
+		if(ret<0){
+			return;		
+		}else if(ret==0){
+			pclient->timeoutCounter++;
+			deb_print("module:%d heartbeat lost %d\n", pclient->moduleID, pclient->timeoutCounter);
+			if(pclient->timeoutCounter > TIMEOUTLIMIT){
+				LOCK_CLIENT_TABLE;
+				table_delete(client_table, pclient);
+				UNLOCK_CLIENT_TABLE;
+			}
+		}else{
+			ret = recvfrom(udpFd, &umsg, sizeof(msg), 0,
+						NULL, NULL);
+			if(umsg.dataType == HEARTBEAT_ACK){
+				deb_print("recvfrom heartbeat_ack from module:%d\n", pclient->moduleID );
+				pclient->timeoutCounter=0;			
+			}	
+		}		
+		sleep(5);
 	}
 }

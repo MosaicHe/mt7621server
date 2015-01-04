@@ -152,11 +152,16 @@ int main(int argc, char**argv)
 			pmsi->fd = cli_fd;
 			pmsi->addr = peer_addr;
 			deb_print("ip:%s connected\n",inet_ntoa(peer_addr.sin_addr));
-			ret=pthread_create( &ptd, NULL, workThread, pmsi);
+#if 0
+//			ret=pthread_create( &ptd, NULL, workThread, pmsi);
 			if(ret<0){
 				perror("pthread_create error!\n");
 				exit(-1);
 			}
+#else
+			tcpwork(pmsi);
+#endif
+
 		}else if(FD_ISSET(unix_fd, &rdfds)){
 			cli_fd=accept(unix_fd, NULL, NULL);
 			if(temp_fd<0){

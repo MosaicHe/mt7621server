@@ -4,16 +4,15 @@
 
 #define READ_TIMEOUT 1
 
-static int moduleFd;
 static msg *pmsg;
-static struct sockaddr_in addr;
+
 
 void doConfigModule(int fd, client* pclient)
 {
 	sendData(fd, REQ_CONFIG, NULL, 0);
 }
 
-int handleModuleRegister()
+int handleModuleRegister(int moduleFd, struct sockaddr_in addr)
 {
 	client *pclient;
 	struct timeval tv;
@@ -129,8 +128,7 @@ void handleModuleReport()
 
 }
 
-
-
+#if 0
 void* workThread(void* arg)
 {
 	fd_set rdfds;
@@ -163,3 +161,42 @@ void* workThread(void* arg)
 	free(pmsg);
 	close(moduleFd);
 }
+#endif
+
+void tcpwork(void* arg)
+{
+	fd_set rdfds;
+	struct timeval tv;
+	int count;
+	int ret;
+	int moduleFd;
+	static struct sockaddr_in addr;
+	printf("workThread\n");
+	moduleFd = ((struct moduleSocketInfo*)arg)->fd;
+	addr = ((struct moduleSocketInfo*)arg)->addr;
+	free(arg);
+
+	pmsg = (msg*)malloc(sizeof(msg));
+	tv.tv_sec = READ_TIMEOUT;
+	tv.tv_usec = 0;
+	ret = recvData(moduleFd, pmsg, &tv);
+	if(ret<0||ret==0){
+		printf("read socket error\n");
+	}
+	printf("%d**********\n",pmsg->dataType);
+	switch(pmsg->dataType){
+		case REQ_REGISTER:
+			handleModuleRegister(moduleFd, addr);
+			break;
+		case REQ_REPORT:
+			handleModuleReport();
+			break;
+		default:
+			break;
+	}
+	free(pmsg);
+	close(moduleFd);
+}
+
+
+
