@@ -20,21 +20,26 @@ int handleModuleRegister(int moduleFd, struct sockaddr_in addr)
 	int fwUpdate;
 
 	LOCK_CLIENT_TABLE;
-	if( table_get_by_id(client_table, &pclient, pmsg->id) ){
-		pclient = (client*)malloc(sizeof(client));
-		pclient->state = STATE_IDLE;
-		pclient->addr = addr; 
-		pclient->activeTime = time(NULL)+READ_TIMEOUT;
-		pclient->moduleID = pmsg->id;
-		pclient->timeoutCounter=0;
-		memcpy(&pclient->mdInfo, pmsg->dataBuf, sizeof(moduleInfo));
-		table_insert( client_table, pclient);
-		deb_print("24G state:%d,5G state:%d\n",pclient->mdInfo.state_24g, pclient->mdInfo.state_5g);
-		printModuleInfo( &(pclient->mdInfo));
-		//set pclient point to where client_table[i] point to,
-		//so we can change client node by pclient
-		table_get_by_id(client_table, &pclient, pmsg->id);
+	//delete pclient when a new register comming;
+	if( table_get_by_id(client_table, &pclient, pmsg->id)!=NULL ){
+		table_delete(client_table, &pclient);
 	}
+
+	pclient = (client*)malloc(sizeof(client));
+	pclient->state = STATE_IDLE;
+	pclient->addr = addr; 
+	pclient->activeTime = time(NULL);
+	pclient->moduleID = pmsg->id;
+	pclient->timeoutCounter=0;
+	memcpy(&pclient->mdInfo, pmsg->dataBuf, sizeof(moduleInfo));
+	table_insert( client_table, pclient);
+	deb_print("24G state:%d,5G state:%d\n",pclient->mdInfo.state_24g, pclient->mdInfo.state_5g);
+	printModuleInfo( &(pclient->mdInfo));
+
+	//set pclient point to where client_table[i] point to,
+	//so we can change client node by pclient
+	table_get_by_id(client_table, &pclient, pmsg->id);
+	
 	memcpy(&pclient->mdInfo, pmsg->dataBuf, sizeof(moduleInfo));
 	pclient->state = STATE_HELLO;
 	UNLOCK_CLIENT_TABLE;
@@ -49,10 +54,13 @@ int handleModuleRegister(int moduleFd, struct sockaddr_in addr)
 		return -1;	
 	}
 	while(1){
-		tv.tv_sec = READ_TIMEOUT;
+		tv.tv_sec = 1;
 		ret = recvData(moduleFd, pmsg, &tv);
 		if(ret!=sizeof(msg)){
 			printf("recvData error\n");
+			LOCK_CLIENT_TABLE;
+			pclient->state = STATE_IDLE;
+			UNLOCK_CLIENT_TABLE;
 			return -1;
 		}
 
@@ -169,13 +177,14 @@ void tcpwork(void* arg)
 	struct timeval tv;
 	int count;
 	int ret;
+
 	int moduleFd;
 	static struct sockaddr_in addr;
 	printf("workThread\n");
 	moduleFd = ((struct moduleSocketInfo*)arg)->fd;
 	addr = ((struct moduleSocketInfo*)arg)->addr;
 	free(arg);
-
+	deb_print("moduleFd:%d\n", moduleFd);
 	pmsg = (msg*)malloc(sizeof(msg));
 	tv.tv_sec = READ_TIMEOUT;
 	tv.tv_usec = 0;

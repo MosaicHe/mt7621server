@@ -143,7 +143,7 @@ extern int sendData(int fd, int dataType, void* pbuf, int buflen)
 		p_responseBuf->dataSize = buflen;
 		memcpy( p_responseBuf->dataBuf, pbuf, buflen);
 	}
-	deb_print("msg size: %ld, dataTyte :%d, dataSize: %d\n",sizeof(msg), dataType, buflen);
+	deb_print("fd=%d, msg size: %ld, dataTyte :%d, dataSize: %d\n", fd, sizeof(msg), dataType, buflen);
 	ret = write(fd, p_responseBuf, sizeof(msg));
 	if(ret< 0){
 		perror("socket write error\n");

@@ -13,9 +13,6 @@
 #include "pingthread.h"
 #include "handleweb.h"
 
-
-#define HB_TIMEOUT 5
- 
 static pthread_cond_t empty_cond = PTHREAD_COND_INITIALIZER;
 int modulefds[10];
 
@@ -129,13 +126,14 @@ int main(int argc, char**argv)
 
 	//open TCP listen socket
 	server_fd = openListenTcpSocket();
-	
+
+#if 1	
 	ret = pthread_create(&pingthd, NULL, pingThread, NULL);
 	if(ret < 0){
 		perror("pthread_create error!\n");
 		exit(-1);
 	}
-	
+#endif
 	while(1){
 		// reset rdfds
 		FD_ZERO(&rdfds);
